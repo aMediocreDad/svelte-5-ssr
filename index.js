@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { createRequire, Module } from "node:module";
-import { Script } from "node:vm";
+import { randomUUID } from "node:crypto";
+import { runInNewContext } from "node:vm";
 
 import { Hono } from "hono";
 import { logger } from "hono/logger";
@@ -11,34 +12,39 @@ import { render } from "svelte/server";
 import { buildClient, buildSsr } from "./esbuild.js";
 
 async function renderApp(props) {
-	const stdin = `import { mount } from "svelte";
-	import App from "./app.svelte";
-	mount(App, {
-		target: document.body,
-		intro: true,
-		props: ${JSON.stringify(props)}
-	});
-	`;
-	await buildClient(stdin);
+	try {
+		const stdin = `import { mount } from "svelte";
+		import App from "./app.svelte";
+		mount(App, {
+			target: document.body,
+			intro: true,
+			props: ${JSON.stringify(props)}
+		});
+		`;
+		await buildClient(stdin);
 
-	const build = await buildSsr();
-	const app = new Script(build.outputFiles[0].text);
-	const require = createRequire(import.meta.url);
-	const module = new Module(import.meta.url);
+		const build = await buildSsr();
+		const require = createRequire("/dummy/");
+		const module = new Module(randomUUID());
 
-	const context = { console, module, require };
-	app.runInNewContext(context);
+		const context = { console, module, require };
+		runInNewContext(build.outputFiles[0]?.text, context, "app.js");
 
-	const { default: App } = module.exports;
+		const { default: App } = module.exports;
 
-	let { html, head } = render(App, { props });
+		let { html, head } = render(App, { props });
 
-	head = `<link rel="stylesheet" href="/app.css" />
-	<script type="module" src="/app.js"></script>
-	${head}
-	`;
+		head = `<link rel="stylesheet" href="/app.css" />
+		<script type="module" src="/app.js"></script>
+		${head}
+		`;
 
-	return { html, head };
+		return { html, head };
+	} catch (e) {
+		// node:vm throws a ReferenceError when the script fails to run
+		// Hono does not catch this error, so we need to throw it ourselves
+		throw Error(e);
+	}
 }
 
 const app = new Hono();
@@ -63,6 +69,13 @@ app.get("/api/name", async (c) => {
 	return c.json(api);
 });
 
-serve({ fetch: app.fetch, hostname: "localhost", port: 3000 }, (info) => {
-	console.log(`Listening on ${info.address}:${info.port}`);
-});
+serve(
+	{
+		fetch: app.fetch,
+		hostname: "localhost",
+		port: 3000,
+	},
+	(info) => {
+		console.log(`Listening on ${info.address}:${info.port}`);
+	}
+);

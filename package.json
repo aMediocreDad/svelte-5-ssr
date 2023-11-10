@@ -1,0 +1,26 @@
+{
+	"name": "svelte-5-ssr",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"type": "module",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"start": "node --watch index.js"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"dependencies": {
+		"@hono/node-server": "1.2.0",
+		"esbuild": "0.19.5",
+		"esbuild-svelte": "0.8.0",
+		"hono": "3.9.2",
+		"svelte": "5.0.0-next.1"
+	},
+	"pnpm": {
+		"patchedDependencies": {
+			"esbuild-svelte@0.8.0": "patches/esbuild-svelte@0.8.0.patch"
+		}
+	}
+}

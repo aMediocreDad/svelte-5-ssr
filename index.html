@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background: #111;
+        font-family: sans-serif;
+        display: grid;
+        grid-template-columns: 1fr [content-start] minmax(1fr, 70ch) [content-end] 1fr;
+      }
+      body > * {
+        grid-column: content / content;
+        padding: 1rem;
+      }
+    </style>
+    <!--SSR-HEAD-->
+  </head>
+  <body>
+    <!--SSR-HTML-->
+  </body>
+</html>

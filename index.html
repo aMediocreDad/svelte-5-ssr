@@ -10,10 +10,13 @@
         background: #111;
         font-family: sans-serif;
         display: grid;
-        grid-template-columns: 1fr [content-start] minmax(1fr, 70ch) [content-end] 1fr;
+        grid-template-columns:
+          minmax(2rem, 1fr)
+          [content-start] min(100% - 4rem, 70ch) [content-end]
+          minmax(2rem, 1fr);
       }
       body > * {
-        grid-column: content / content;
+        grid-column: content;
         padding: 1rem;
       }
     </style>

@@ -20,7 +20,18 @@
         padding: 1rem;
       }
     </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "svelte": "https://unpkg.com/svelte@5.0.0-next.1/src/main/main-client.js",
+          "svelte/internal": "https://unpkg.com/svelte@5.0.0-next.1/src/internal/index.js",
+          "esm-env": "https://unpkg.com/esm-env@1.0.0/prod-browser.js"
+        }
+      }
+    </script>
     <!--SSR-HEAD-->
+    <link rel="stylesheet" href="/app.css" />
+    <script type="module" src="/app.js"></script>
   </head>
   <body>
     <!--SSR-HTML-->

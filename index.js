@@ -6,10 +6,14 @@ import { logger } from "hono/logger";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { serve } from "@hono/node-server";
 
-import { renderSvelte } from "./scripts/render.js";
+import { compileSvelte } from "./scripts/render.js";
 
 const app = new Hono();
 const view = await readFile("index.html", "utf-8");
+const { render } = await compileSvelte(resolve("src/app.svelte"), {
+	writeClient: true,
+});
+console.log("Compiled App.svelte");
 
 app.use("*", logger());
 app.use("*", serveStatic({ root: "./public" }));
@@ -17,10 +21,7 @@ app.use("*", serveStatic({ root: "./public" }));
 app.get("/", async (c) => {
 	const name = c.req.query("name") || "World";
 
-	let { html, head } = await renderSvelte({
-		file: resolve("src/app.svelte"),
-		props: { name },
-	});
+	let { html, head } = await render({ name });
 
 	const page = view
 		.replace("<!--SSR-HEAD-->", head)

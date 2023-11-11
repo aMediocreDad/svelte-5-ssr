@@ -52,12 +52,15 @@ async function renderSSR(ssrOutput, props, context) {
 
 	let { html, head } = render(App, { props, context });
 
+	if (props || context)
+		head += `<script>window.Props = ${JSON.stringify(props)};
+window.Context = ${JSON.stringify(context)};</script>`;
 	if (ssrOutput.css) head += `<style>${ssrOutput.css.code}</style>`;
 
 	return { head, html };
 }
 
-async function writeClient(clientOutput, props, context) {
+async function writeClient(clientOutput) {
 	try {
 		if (clientOutput.css)
 			await writeFile("public/app.css", clientOutput.css.code);
@@ -69,8 +72,8 @@ async function writeClient(clientOutput, props, context) {
 mount(window.App, {
 	target: document.body,
 	intro: true,
-	props: ${JSON.stringify(props)},
-	context: ${JSON.stringify(context)}
+	props: window.Props || {},
+	context: window.Context || {},
 });
 `;
 			await writeFile("public/app.js", js);
@@ -80,23 +83,28 @@ mount(window.App, {
 	}
 }
 
-export async function renderSvelte({
-	file,
-	props = {},
-	context = {},
-	options = {},
-}) {
+export async function compileSvelte(file, options = {}) {
 	if (!file) throw Error("Missing file");
+	const clientOptions = options.clientCompilerOptions || {};
+	const serverOptions = options.serverCompilerOptions || {};
+
 	try {
 		const code = await readFile(file, "utf-8");
-		const ssrOutput = await compile(code, { ...SSR_DEFAULTS, ...options });
-		const clientOutput = await compile(code, {
+		const server = await compile(code, { ...SSR_DEFAULTS, ...serverOptions });
+		const client = await compile(code, {
 			...CLIENT_DEFAULTS,
-			...options,
+			...clientOptions,
 		});
-		await writeClient(clientOutput, props, context);
 
-		return renderSSR(ssrOutput, props, context);
+		if (options.writeClient)
+			await writeClient(client, options.props, options.context);
+
+		return {
+			server,
+			client,
+			/** Renders server output */
+			render: (props, context) => renderSSR(server, props, context),
+		};
 	} catch (e) {
 		// Normalize Error types to avoid serializing issues
 		throw Error(e);

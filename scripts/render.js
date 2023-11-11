@@ -40,24 +40,28 @@ async function linker(specifier, referencingModule) {
 }
 
 async function renderSSR(ssrOutput, props, context) {
-	const module = new SourceTextModule(ssrOutput.js.code, {
-		identifier: "app.js",
-		importModuleDynamically: linker,
-	});
+	try {
+		const module = new SourceTextModule(ssrOutput.js.code, {
+			identifier: "app.js",
+			importModuleDynamically: linker,
+		});
 
-	await module.link(linker);
-	await module.evaluate();
+		await module.link(linker);
+		await module.evaluate();
 
-	const App = module.namespace.default;
+		const App = module.namespace.default;
 
-	let { html, head } = render(App, { props, context });
+		let { html, head } = render(App, { props, context });
 
-	if (props || context)
-		head += `<script>window.Props = ${JSON.stringify(props)};
+		if (props || context)
+			head += `<script>window.Props = ${JSON.stringify(props)};
 window.Context = ${JSON.stringify(context)};</script>`;
-	if (ssrOutput.css) head += `<style>${ssrOutput.css.code}</style>`;
+		if (ssrOutput.css) head += `<style>${ssrOutput.css.code}</style>`;
 
-	return { head, html };
+		return { head, html };
+	} catch (error) {
+		throw Error("Failed to render SSR", { cause: error });
+	}
 }
 
 async function writeClient(clientOutput) {
@@ -83,30 +87,40 @@ mount(window.App, {
 	}
 }
 
+/**
+ * Compiles a Svelte file for server and client
+ * @param {string} file Path to Svelte file (absolute)
+ * @param {{
+ *   clientCompilerOptions: import("svelte/compiler").CompileOptions;
+ *   serverCompilerOptions: import("svelte/compiler").CompileOptions;
+ * }} options
+ */
 export async function compileSvelte(file, options = {}) {
 	if (!file) throw Error("Missing file");
 	const clientOptions = options.clientCompilerOptions || {};
 	const serverOptions = options.serverCompilerOptions || {};
 
+	let server, client;
 	try {
 		const code = await readFile(file, "utf-8");
-		const server = await compile(code, { ...SSR_DEFAULTS, ...serverOptions });
-		const client = await compile(code, {
+		server = await compile(code, { ...SSR_DEFAULTS, ...serverOptions });
+		client = await compile(code, {
 			...CLIENT_DEFAULTS,
 			...clientOptions,
 		});
-
-		if (options.writeClient)
-			await writeClient(client, options.props, options.context);
-
-		return {
-			server,
-			client,
-			/** Renders server output */
-			render: (props, context) => renderSSR(server, props, context),
-		};
 	} catch (e) {
 		// Normalize Error types to avoid serializing issues
-		throw Error(e);
+		throw Error("Failed to compile Svelte file", { cause: e });
 	}
+
+	if (options.writeClient) await writeClient(client);
+
+	return {
+		/** Server Output */
+		server,
+		/** Client Output */
+		client,
+		/** Renders server output */
+		render: (props, context) => renderSSR(server, props, context),
+	};
 }

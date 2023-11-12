@@ -1,23 +1,26 @@
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
 
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
 import { logger } from "hono/logger";
+import { render } from "svelte/server";
 
-import { compileSvelte, renderSSR as render } from "./render.js";
+import { default as App } from "./app.svelte";
 
 const app = new Hono();
 const view = await readFile("index.html", "utf-8");
-await compileSvelte(resolve("src/app.svelte"));
 
 app.use("*", logger());
-app.use("/client/*", serveStatic({ root: ".cache" }));
+app.use("/assets/*", serveStatic({ root: "./dist" }));
 
 app.get("/", async (c) => {
 	const name = c.req.query("name") || "World";
 
-	let { html, head } = await render({ name });
+	// @ts-expect-error - This will not be properly typed
+	let { html, head } = render(App, { props: { name } });
+
+	head += `<script>window.Props = ${JSON.stringify({ name })};
+	window.Context = ${JSON.stringify({})};</script>`;
 
 	const page = view
 		.replace("<!--SSR-HEAD-->", head)
@@ -33,4 +36,5 @@ app.get("/api/name", async (c) => {
 	return c.json(api);
 });
 
+console.log("Server setup in", Bun.nanoseconds() / 1e6, "ms");
 export default app;

@@ -1,19 +1,13 @@
 {
-	"name": "svelte-5-ssr",
-	"version": "2.0.0",
-	"description": "",
-	"main": "index.js",
 	"type": "module",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
-		"start": "node --experimental-vm-modules --inspect --watch-path=./src --watch-path=./scripts --watch-path=index.html --watch-path=./index.js ."
+		"start": "bun run --hot src/index.ts"
 	},
-	"keywords": [],
-	"author": "",
-	"license": "ISC",
 	"dependencies": {
-		"@hono/node-server": "1.2.0",
-		"hono": "3.9.2",
-		"svelte": "5.0.0-next.1"
+		"hono": "^3.9.2",
+		"svelte": "next"
+	},
+	"devDependencies": {
+		"bun-types": "^1.0.7"
 	}
 }
